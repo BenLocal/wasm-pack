@@ -140,6 +140,9 @@ pub fn download_prebuilt(
                 None => bail!("wasm-bindgen v{} is not installed!", version),
             }
         }
+        Tool::WXWasmBindgen => {
+            bail!("skip download wx-wasm-bindgen v{}!", version)
+        }
         Tool::CargoGenerate => {
             let binaries = &["cargo-generate"];
             match cache.download(install_permitted, "cargo-generate", binaries, &url)? {
@@ -207,6 +210,9 @@ pub fn prebuilt_url_for(tool: &Tool, version: &str, arch: &Arch, os: &Os) -> Res
         target = target,
             ))
         }
+        Tool::WXWasmBindgen => {
+            Ok(String::new())
+        }
     }
 }
 
@@ -251,6 +257,7 @@ pub fn cargo_install(
 
     let crate_name = match tool {
         Tool::WasmBindgen => "wasm-bindgen-cli".to_string(),
+        Tool::WXWasmBindgen => "wx-wasm-bindgen".to_string(),
         _ => tool.to_string(),
     };
     let mut cmd = Command::new("cargo");
@@ -274,6 +281,7 @@ pub fn cargo_install(
     // little renaming here.
     let binaries: Result<Vec<&str>> = match tool {
         Tool::WasmBindgen => Ok(vec!["wasm-bindgen", "wasm-bindgen-test-runner"]),
+        Tool::WXWasmBindgen => Ok(vec!["wx-wasm-bindgen"]),
         Tool::CargoGenerate => Ok(vec!["cargo-generate"]),
         Tool::WasmOpt => bail!("Cannot install wasm-opt with cargo."),
     };

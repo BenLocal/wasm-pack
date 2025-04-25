@@ -41,6 +41,7 @@ pub struct Build {
     pub bindgen: Option<install::Status>,
     pub cache: Cache,
     pub extra_options: Vec<String>,
+    pub wx: bool,
 }
 
 /// What sort of output we're going to be generating and flags we're invoking
@@ -182,6 +183,10 @@ pub struct BuildOptions {
     /// Option to skip optimization with wasm-opt
     pub no_opt: bool,
 
+    /// Use wx-wasm-bindgen instead of wasm-bindgen
+    #[clap(long = "wx", default_value_t = false)]
+    pub wx: bool,
+
     /// List of extra options to pass to `cargo build`
     pub extra_options: Vec<String>,
 }
@@ -206,6 +211,7 @@ impl Default for BuildOptions {
             out_dir: String::new(),
             out_name: None,
             extra_options: Vec::new(),
+            wx: false,
         }
     }
 }
@@ -260,6 +266,7 @@ impl Build {
             bindgen: None,
             cache: cache::get_wasm_pack_cache()?,
             extra_options: build_opts.extra_options,
+            wx: build_opts.wx,
         })
     }
 
@@ -270,7 +277,7 @@ impl Build {
 
     /// Execute this `Build` command.
     pub fn run(&mut self) -> Result<()> {
-        let process_steps = Build::get_process_steps(self.mode, self.no_pack, self.no_opt);
+        let process_steps = Build::get_process_steps(self.mode, self.no_pack, self.no_opt, self.wx);
 
         let started = Instant::now();
 
@@ -299,6 +306,7 @@ impl Build {
         mode: InstallMode,
         no_pack: bool,
         no_opt: bool,
+        wx: bool,
     ) -> Vec<(&'static str, BuildStep)> {
         macro_rules! steps {
             ($($name:ident),+) => {
@@ -322,12 +330,16 @@ impl Build {
             }
         }
 
-        steps.extend(steps![
-            step_build_wasm,
-            step_create_dir,
-            step_install_wasm_bindgen,
-            step_run_wasm_bindgen,
-        ]);
+        steps.extend(steps![step_build_wasm, step_create_dir,]);
+
+        if wx {
+            steps.extend(steps![
+                step_install_wx_wasm_bindgen,
+                step_run_wx_wasm_bindgen,
+            ]);
+        } else {
+            steps.extend(steps![step_install_wasm_bindgen, step_run_wasm_bindgen,]);
+        }
 
         if !no_opt {
             steps.extend(steps![step_run_wasm_opt]);
@@ -435,6 +447,7 @@ impl Build {
     fn step_run_wasm_bindgen(&mut self) -> Result<()> {
         info!("Building the wasm bindings...");
         bindgen::wasm_bindgen_build(
+            Tool::WasmBindgen,
             &self.crate_data,
             self.bindgen.as_ref().unwrap(),
             &self.out_dir,
@@ -447,6 +460,41 @@ impl Build {
             &self.extra_options,
         )?;
         info!("wasm bindings were built at {:#?}.", &self.out_dir);
+        Ok(())
+    }
+
+    fn step_run_wx_wasm_bindgen(&mut self) -> Result<()> {
+        info!("Building the wechat wasm bindings...");
+        bindgen::wasm_bindgen_build(
+            Tool::WXWasmBindgen,
+            &self.crate_data,
+            self.bindgen.as_ref().unwrap(),
+            &self.out_dir,
+            &self.out_name,
+            self.disable_dts,
+            self.weak_refs,
+            self.reference_types,
+            self.target,
+            self.profile.clone(),
+            &self.extra_options,
+        )?;
+        info!("wasm bindings were built at {:#?}.", &self.out_dir);
+        Ok(())
+    }
+
+    fn step_install_wx_wasm_bindgen(&mut self) -> Result<()> {
+        // info!("Identifying wx-wasm-bindgen dependency...");
+        // let lockfile = Lockfile::new(&self.crate_data)?;
+        // let bindgen_version = lockfile.require_wasm_bindgen()?;
+        info!("Installing wx-wasm-bindgen-cli...");
+        let bindgen = install::download_prebuilt_or_cargo_install(
+            Tool::WXWasmBindgen,
+            &self.cache,
+            "0.1.0",
+            self.mode.install_permitted(),
+        )?;
+        self.bindgen = Some(bindgen);
+        info!("Installing wx-wasm-bindgen was successful.");
         Ok(())
     }
 

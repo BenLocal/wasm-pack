@@ -8,6 +8,8 @@ pub enum Tool {
     WasmBindgen,
     /// wasm-opt CLI tool
     WasmOpt,
+    /// wechat wasm-bindgen CLI tools
+    WXWasmBindgen,
 }
 
 impl fmt::Display for Tool {
@@ -16,6 +18,7 @@ impl fmt::Display for Tool {
             Tool::CargoGenerate => "cargo-generate",
             Tool::WasmBindgen => "wasm-bindgen",
             Tool::WasmOpt => "wasm-opt",
+            Tool::WXWasmBindgen => "wx-wasm-bindgen",
         };
         write!(f, "{}", s)
     }

@@ -11,7 +11,9 @@ use std::process::Command;
 
 /// Run the `wasm-bindgen` CLI to generate bindings for the current crate's
 /// `.wasm`.
+/// command_name will is wasm-bindgen or wx-wasm-bindgen
 pub fn wasm_bindgen_build(
+    tool: Tool,
     data: &CrateData,
     install_status: &install::Status,
     out_dir: &Path,
@@ -51,8 +53,8 @@ pub fn wasm_bindgen_build(
     } else {
         "--typescript"
     };
-    let bindgen_path = install::get_tool_path(install_status, Tool::WasmBindgen)?
-        .binary(&Tool::WasmBindgen.to_string())?;
+    let command_name = &tool.to_string();
+    let bindgen_path = install::get_tool_path(install_status, tool)?.binary(command_name)?;
 
     let mut cmd = Command::new(&bindgen_path);
     cmd.arg(&wasm_path)
@@ -96,7 +98,7 @@ pub fn wasm_bindgen_build(
         cmd.arg("--split-linked-modules");
     }
 
-    child::run(cmd, "wasm-bindgen").context("Running the wasm-bindgen CLI")?;
+    child::run(cmd, &command_name).context(format!("Running the {} CLI", &command_name))?;
     Ok(())
 }
 
