@@ -255,20 +255,23 @@ pub fn cargo_install(
     let context = format!("failed to create temp dir for `cargo install {}`", tool);
     fs::create_dir_all(&tmp).context(context)?;
 
-    let crate_name = match tool {
-        Tool::WasmBindgen => "wasm-bindgen-cli".to_string(),
-        Tool::WXWasmBindgen => "wx-wasm-bindgen".to_string(),
-        _ => tool.to_string(),
+    let args = match tool {
+        Tool::WasmBindgen => vec!["wasm-bindgen-cli".to_string()],
+        Tool::WXWasmBindgen => vec![
+            "--git".to_string(),
+            "https://github.com/BenLocal/wx-wasm-bindgen".to_string(),
+        ],
+        _ => vec![tool.to_string()],
     };
     let mut cmd = Command::new("cargo");
 
     cmd.arg("install")
         .arg("--force")
-        .arg(crate_name)
+        .args(&args)
         .arg("--root")
         .arg(&tmp);
 
-    if version != "latest" {
+    if version != "latest" && !args.contains(&"--git".to_string()) {
         cmd.arg("--version").arg(version);
     }
 

@@ -483,14 +483,14 @@ impl Build {
     }
 
     fn step_install_wx_wasm_bindgen(&mut self) -> Result<()> {
-        // info!("Identifying wx-wasm-bindgen dependency...");
-        // let lockfile = Lockfile::new(&self.crate_data)?;
-        // let bindgen_version = lockfile.require_wasm_bindgen()?;
+        info!("Identifying wx-wasm-bindgen dependency...");
+        // TODO: This should be read from the lockfile
+        let bindgen_version = "0.3.0";
         info!("Installing wx-wasm-bindgen-cli...");
         let bindgen = install::download_prebuilt_or_cargo_install(
             Tool::WXWasmBindgen,
             &self.cache,
-            "0.1.0",
+            bindgen_version,
             self.mode.install_permitted(),
         )?;
         self.bindgen = Some(bindgen);
